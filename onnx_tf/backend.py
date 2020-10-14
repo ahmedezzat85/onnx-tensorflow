@@ -119,12 +119,19 @@ class TensorflowBackend(Backend):
         value_info_name = value_info.name.replace(
             ":", "_tf_") + "_" + get_unique_suffix(
             ) if ":" in value_info.name else value_info.name
-
+        
+        # [Ahmed Ezzat] For compatibility with TensorFlow and TensorFlow Lite 
+        # input data format 'NHWC', create the input placeholder with the 'NHWC' 
+        # format and add a successive transpose layer. The node name of the 
+        # transpose layer must be the same as the onnx model input node name. 
+        shape = [shape[0], shape[2], shape[3], shape[1]]
         x = tf.placeholder(data_type.onnx2tf(
             value_info.type.tensor_type.elem_type),
-                           name=value_info_name,
+                           name='input',
                            shape=shape)
-        input_dict_items.append((value_info.name, x))
+        x1 = tf.transpose(x, perm=[0, 3, 1, 2], name=value_info.name)
+        input_dict_items.append(('input', x))
+        input_dict_items.append((value_info.name, x1))
 
       # tensor dict: this dictionary is a map from variable names
       # to the latest produced TF tensors of the given name.
